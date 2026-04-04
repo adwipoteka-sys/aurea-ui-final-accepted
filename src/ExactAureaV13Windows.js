@@ -41,7 +41,7 @@ function getCoverFrame({ width, height, meta, focalX = 0.5, focalY = 0.5 }) {
   const artW = px(meta.width * scale);
   const artH = px(meta.height * scale);
   const left = px(width / 2 - artW * focalX);
-  const top = px(width ? height / 2 - artH * focalY : 0);
+  const top = px(height / 2 - artH * focalY);
 
   return { width: artW, height: artH, left, top };
 }
@@ -188,21 +188,19 @@ function ReceiptShareHit({ frame, onPress }) {
 
 export default function ExactAureaV13Windows() {
   const [screen, setScreen] = useState('home');
-  const { width, height } = useWindowDimensions();
-
-  const isStaticScreen = screen !== 'prometei';
+  const [overlay, setOverlay] = useState(null);
 
   const frame = useMemo(() => {
-    if (!isStaticScreen || !width || !height) return null;
+  if (!width || !height) return null;
 
-    return getCoverFrame({
-      width,
-      height,
-      meta: SCREEN_META[screen],
-      focalX: 0.5,
-      focalY: 0.5,
-    });
-  }, [height, isStaticScreen, screen, width]);
+  return getCoverFrame({
+    width,
+    height,
+    meta: SCREEN_META[screen],
+    focalX: 0.5,
+    focalY: 0.5,
+  });
+}, [height, screen, width]);
 
   const openReceiptShare = async () => {
     try {
@@ -224,22 +222,24 @@ export default function ExactAureaV13Windows() {
   };
 
   const handleHomeAction = (action) => {
-    if (action === 'projects') {
-      setScreen('prometei');
-      return;
-    }
-
-    setScreen('send');
-  };
-
-  if (screen === 'prometei') {
-    return <PrometeiDiscoveryScreen onBack={() => setScreen('home')} onSelect={setScreen} />;
+  if (action === 'projects') {
+    setOverlay('prometei');
+    return;
   }
+
+  setOverlay(null);
+  setScreen('send');
+};
+
+  const handleSelectScreen = (nextScreen) => {
+    setOverlay(null);
+    setScreen(nextScreen);
+  };
 
   return (
     <View style={styles.root}>
       {frame && (
-        <>
+        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
           <Image
             source={STATIC_SCREENS[screen]}
             resizeMode="stretch"
@@ -255,16 +255,30 @@ export default function ExactAureaV13Windows() {
             pointerEvents="none"
           />
 
-          <NavHitRow frame={frame} onSelect={setScreen} />
+          <NavHitRow frame={frame} onSelect={handleSelectScreen} />
 
           {screen === 'home' && <HomeActionHits frame={frame} onAction={handleHomeAction} />}
 
-          {screen !== 'home' && <BackHit frame={frame} onPress={handleBack} />}
+          {screen !== 'home' && overlay !== 'prometei' && (
+            <BackHit frame={frame} onPress={handleBack} />
+          )}
 
-          {screen === 'send' && <SendOkHit frame={frame} onPress={() => setScreen('receipt')} />}
+          {screen === 'send' && (
+            <SendOkHit frame={frame} onPress={() => setScreen('receipt')} />
+          )}
 
-          {screen === 'receipt' && <ReceiptShareHit frame={frame} onPress={openReceiptShare} />}
-        </>
+          {screen === 'receipt' && (
+            <ReceiptShareHit frame={frame} onPress={openReceiptShare} />
+          )}
+
+          {overlay === 'prometei' && (
+            <PrometeiDiscoveryScreen
+              onClose={() => setOverlay(null)}
+              onBack={() => setOverlay(null)}
+              onSelect={handleSelectScreen}
+            />
+          )}
+        </View>
       )}
     </View>
   );
