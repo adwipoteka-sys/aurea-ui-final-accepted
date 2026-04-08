@@ -338,11 +338,11 @@ export default function PrometeiDiscoveryScreen({ onClose, onBack }) {
         <View style={styles.panelInner}>
           <ScrollView
             style={styles.scrollFill}
-            contentContainerStyle={[styles.panelScrollContent, { paddingBottom: 56 }]}
+            contentContainerStyle={styles.panelScrollContent}
             showsVerticalScrollIndicator
             keyboardShouldPersistTaps="handled"
-           alwaysBounceVertical
-           bounces
+            alwaysBounceVertical
+            bounces
           >
             <View style={styles.topCap} />
 
@@ -408,18 +408,17 @@ export default function PrometeiDiscoveryScreen({ onClose, onBack }) {
                 ))}
               </View>
             ) : (
-  ) : (
-  <View style={styles.listBox}>
-    {filtered.map((agent) => (
-      <AgentListRow
-        key={agent.id}
-        agent={agent}
-        selected={selectedAgent?.id === agent.id}
-        onPress={() => setSelectedId(agent.id)}
-      />
-    ))}
-  </View>
-)}
+              <View style={styles.listBox}>
+                {filtered.map((agent) => (
+                  <AgentListRow
+                    key={agent.id}
+                    agent={agent}
+                    selected={selectedAgent?.id === agent.id}
+                    onPress={() => setSelectedId(agent.id)}
+                  />
+                ))}
+              </View>
+            )}
 
             <View style={styles.focusCard}>
               <View style={styles.focusGlow} />
@@ -439,7 +438,10 @@ export default function PrometeiDiscoveryScreen({ onClose, onBack }) {
               </View>
 
               {Platform.OS === 'ios' && (
-                <Pressable style={styles.appleMapBtn} onPress={() => openUrlSafe(buildAppleMapsUrl(selectedAgent))}>
+                <Pressable
+                  style={styles.appleMapBtn}
+                  onPress={() => openUrlSafe(buildAppleMapsUrl(selectedAgent))}
+                >
                   <Text style={styles.appleMapBtnText}>Apple Maps</Text>
                 </Pressable>
               )}
@@ -456,8 +458,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 50,
   },
-
-  
 
   backCrop: {
     position: 'absolute',
@@ -522,7 +522,7 @@ const styles = StyleSheet.create({
   panelScrollContent: {
     paddingHorizontal: 18,
     paddingTop: 18,
-    paddingBottom: 24,
+    paddingBottom: 56,
   },
 
   topCap: {
