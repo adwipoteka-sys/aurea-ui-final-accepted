@@ -189,6 +189,7 @@ function ReceiptShareHit({ frame, onPress }) {
 export default function ExactAureaV13Windows() {
   const [screen, setScreen] = useState('home');
   const [overlay, setOverlay] = useState(null);
+  const { width, height } = useWindowDimensions();
 
   const frame = useMemo(() => {
   if (!width || !height) return null;

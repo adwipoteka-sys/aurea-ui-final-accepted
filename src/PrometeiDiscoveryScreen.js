@@ -9,21 +9,94 @@ import {
   useWindowDimensions,
   ScrollView,
   Image,
+  Alert,
+  Linking,
+  Platform,
 } from 'react-native';
 
 const px = PixelRatio.roundToNearestPixel;
+const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 
 const SEND_CHROME = require('../assets/exact/send-v13-chrome.png');
 const SEND_META = Image.resolveAssetSource(SEND_CHROME);
 
+const HOME_CHROME = require('../assets/foundation/reference/home-v13-exact-4k.png');
+const HOME_META = Image.resolveAssetSource(HOME_CHROME);
+
 const BACK_RECT = { x: 0.0382, y: 0.0732, w: 0.2484, h: 0.1025 };
+const HOME_NAV_ROW = { x: 0.0576, y: 0.7407, w: 0.8848, h: 0.0812 };
 
 const AGENTS = [
-  { id: 'iv', short: 'IV', name: 'Ivan Volkov', city: 'Москва', rating: 4.9, reserve: '12 400 USDT', color: '#63d7ff', x: 0.20, y: 0.62, online: true },
-  { id: 'ap', short: 'AP', name: 'Anna Petrova', city: 'Санкт-Петербург', rating: 4.8, reserve: '8 100 USDT', color: '#7cffd5', x: 0.43, y: 0.49, online: true },
-  { id: 'nc', short: 'HC', name: 'Николай Смирнов', city: 'Дубай', rating: 4.7, reserve: '15 800 USDT', color: '#b58cff', x: 0.76, y: 0.44, online: true },
-  { id: 'ac', short: 'AC', name: 'Алексей Сидоров', city: 'Казань', rating: 4.6, reserve: '5 900 USDT', color: '#ffca63', x: 0.63, y: 0.66, online: false },
-  { id: 'am', short: 'AM', name: 'Алёна Михайлова', city: 'Екатеринбург', rating: 4.9, reserve: '9 400 USDT', color: '#ff9f8e', x: 0.34, y: 0.74, online: true },
+  {
+    id: 'iv',
+    short: 'IV',
+    name: 'Ivan Volkov',
+    city: 'Москва',
+    rating: 4.9,
+    reserve: '12 400 USDT',
+    color: '#63d7ff',
+    x: 0.18,
+    y: 0.60,
+    lat: 55.7558,
+    lon: 37.6176,
+    online: true,
+  },
+  {
+    id: 'ap',
+    short: 'AP',
+    name: 'Anna Petrova',
+    city: 'Санкт-Петербург',
+    rating: 4.8,
+    reserve: '8 100 USDT',
+    color: '#7cffd5',
+    x: 0.43,
+    y: 0.42,
+    lat: 59.9343,
+    lon: 30.3351,
+    online: true,
+  },
+  {
+    id: 'nc',
+    short: 'HC',
+    name: 'Николай Смирнов',
+    city: 'Дубай',
+    rating: 4.7,
+    reserve: '15 800 USDT',
+    color: '#b58cff',
+    x: 0.74,
+    y: 0.34,
+    lat: 25.2048,
+    lon: 55.2708,
+    online: true,
+  },
+  {
+    id: 'ac',
+    short: 'AC',
+    name: 'Алексей Сидоров',
+    city: 'Казань',
+    rating: 4.6,
+    reserve: '5 900 USDT',
+    color: '#ffca63',
+    x: 0.57,
+    y: 0.67,
+    lat: 55.7963,
+    lon: 49.1088,
+    online: false,
+  },
+  {
+    id: 'am',
+    short: 'AM',
+    name: 'Алёна Михайлова',
+    city: 'Екатеринбург',
+    rating: 4.9,
+    reserve: '9 400 USDT',
+    color: '#ff9f8e',
+    x: 0.31,
+    y: 0.78,
+    lat: 56.8389,
+    lon: 60.6057,
+    online: true,
+  },
 ];
 
 function getCoverFrame(width, height, meta) {
@@ -42,6 +115,28 @@ function rectFromNorm(frame, rect) {
     width: px(frame.width * rect.w),
     height: px(frame.height * rect.h),
   };
+}
+
+function buildGoogleMapsUrl(agent) {
+  return `https://www.google.com/maps/search/?api=1&query=${agent.lat},${agent.lon}`;
+}
+
+function buildYandexMapsUrl(agent) {
+  return `https://yandex.ru/maps/?pt=${agent.lon},${agent.lat}&z=16&l=map`;
+}
+
+function buildAppleMapsUrl(agent) {
+  return `http://maps.apple.com/?ll=${agent.lat},${agent.lon}&q=${encodeURIComponent(
+    `${agent.name}, ${agent.city}`
+  )}`;
+}
+
+async function openUrlSafe(url) {
+  try {
+    await Linking.openURL(url);
+  } catch {
+    Alert.alert('Не удалось открыть карту');
+  }
 }
 
 function BackReplica({ frame, onPress }) {
@@ -80,7 +175,7 @@ function BackReplica({ frame, onPress }) {
 function ModeButton({ label, active, onPress, style }) {
   return (
     <Pressable onPress={onPress} style={[styles.modeBtn, active && styles.modeBtnActive, style]}>
-      <View style={active ? styles.modeBtnGlow : null} pointerEvents="none" />
+      {active ? <View style={styles.modeBtnGlow} pointerEvents="none" /> : null}
       <Text style={[styles.modeText, active && styles.modeTextActive]}>{label}</Text>
     </Pressable>
   );
@@ -105,7 +200,9 @@ function AgentListRow({ agent, selected, onPress }) {
 
       <View style={{ flex: 1 }}>
         <View style={styles.listTopRow}>
-          <Text numberOfLines={1} style={styles.listName}>{agent.name}</Text>
+          <Text numberOfLines={1} style={styles.listName}>
+            {agent.name}
+          </Text>
           <View style={[styles.statusPill, agent.online ? styles.statusOnline : styles.statusOffline]}>
             <Text style={styles.statusText}>{agent.online ? 'Онлайн' : 'Оффлайн'}</Text>
           </View>
@@ -114,6 +211,35 @@ function AgentListRow({ agent, selected, onPress }) {
         <Text style={styles.listMeta}>
           {agent.city} · ★ {agent.rating} · резерв {agent.reserve}
         </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function MapAgentChip({ agent, selected, onPress }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.mapAgentCard,
+        selected && styles.mapAgentCardActive,
+        {
+          left: `${agent.x * 100}%`,
+          top: `${agent.y * 100}%`,
+        },
+      ]}
+    >
+      <View style={[styles.mapAgentDot, { borderColor: agent.color, shadowColor: agent.color }]}>
+        <View style={[styles.mapAgentDotInner, { backgroundColor: agent.color }]}>
+          <Text style={styles.mapAgentDotText}>{agent.short}</Text>
+        </View>
+      </View>
+
+      <View style={styles.mapAgentInfo}>
+        <Text numberOfLines={1} style={styles.mapAgentName}>
+          {agent.name}
+        </Text>
+        <Text style={styles.mapAgentMeta}>★ {agent.rating}</Text>
       </View>
     </Pressable>
   );
@@ -129,12 +255,17 @@ export default function PrometeiDiscoveryScreen({ onClose, onBack }) {
   const close = onClose || onBack || (() => {});
 
   const sendFrame = useMemo(() => getCoverFrame(width, height, SEND_META), [width, height]);
+  const homeFrame = useMemo(() => getCoverFrame(width, height, HOME_META), [width, height]);
+
+  const navTop = px(homeFrame.top + homeFrame.height * HOME_NAV_ROW.y);
 
   const panelWidth = Math.min(width - 34, 720);
   const panelLeft = px((width - panelWidth) / 2);
-  const panelTop = px(Math.max(height * 0.285, 238));
-  const panelHeight = px(Math.min(Math.max(height * 0.46, 470), 620));
-  const stageHeight = px(Math.min(Math.max(panelHeight * 0.26, 180), 230));
+  const panelTop = px(Math.max(height * 0.245, 205));
+  const panelBottom = px(navTop - 26);
+  const panelHeight = px(clamp(panelBottom - panelTop, 380, 520));
+
+  const stageHeight = px(clamp(panelHeight * 0.29, 180, 240));
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -149,6 +280,29 @@ export default function PrometeiDiscoveryScreen({ onClose, onBack }) {
     () => filtered.find((a) => a.id === selectedId) || filtered[0] || AGENTS[0],
     [filtered, selectedId]
   );
+
+  const openMapPicker = () => {
+    Alert.alert(
+      'Открыть карту',
+      `${selectedAgent.name}, ${selectedAgent.city}`,
+      [
+        { text: 'Google Maps', onPress: () => openUrlSafe(buildGoogleMapsUrl(selectedAgent)) },
+        { text: 'Яндекс.Карты', onPress: () => openUrlSafe(buildYandexMapsUrl(selectedAgent)) },
+        ...(Platform.OS === 'ios'
+          ? [{ text: 'Apple Maps', onPress: () => openUrlSafe(buildAppleMapsUrl(selectedAgent)) }]
+          : []),
+        { text: 'Отмена', style: 'cancel' },
+      ]
+    );
+  };
+
+  const handleBecomePrometei = () => {
+    Alert.alert(
+      'Стать Прометеем',
+      'Здесь должен открываться онбординг агента: город, резерв USDT, способы оплаты, спред, лимиты, график, KYC и публикация профиля.',
+      [{ text: 'Понятно' }]
+    );
+  };
 
   return (
     <View style={styles.overlay} pointerEvents="box-none">
@@ -186,6 +340,7 @@ export default function PrometeiDiscoveryScreen({ onClose, onBack }) {
             style={styles.scrollFill}
             contentContainerStyle={styles.panelScrollContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
             bounces
           >
             <View style={styles.topCap} />
@@ -226,7 +381,7 @@ export default function PrometeiDiscoveryScreen({ onClose, onBack }) {
               <MetaPill label={`${filtered.filter((a) => a.online).length} онлайн`} />
             </View>
 
-            <Pressable style={styles.joinBtn}>
+            <Pressable style={styles.joinBtn} onPress={handleBecomePrometei}>
               <View style={styles.joinBtnGlow} />
               <Text style={styles.joinBtnText}>Стать Прометеем</Text>
             </Pressable>
@@ -243,42 +398,12 @@ export default function PrometeiDiscoveryScreen({ onClose, onBack }) {
                 ))}
 
                 {filtered.map((agent) => (
-                  <Pressable
+                  <MapAgentChip
                     key={agent.id}
-                    style={[
-                      styles.agentPinWrap,
-                      {
-                        left: `${agent.x * 100}%`,
-                        top: `${agent.y * 100}%`,
-                      },
-                    ]}
+                    agent={agent}
+                    selected={selectedAgent?.id === agent.id}
                     onPress={() => setSelectedId(agent.id)}
-                  >
-                    {selectedAgent.id === agent.id && (
-                      <View style={[styles.agentPulse, { borderColor: agent.color }]} />
-                    )}
-
-                    <View
-                      style={[
-                        styles.agentPin,
-                        {
-                          borderColor: agent.color,
-                          shadowColor: agent.color,
-                        },
-                        selectedAgent.id === agent.id && styles.agentPinActive,
-                      ]}
-                    >
-                      <View style={[styles.agentPinCore, { backgroundColor: agent.color }]}>
-                        <Text style={styles.agentPinCoreText}>{agent.short}</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.agentLabel}>
-                      <Text style={styles.agentLabelText} numberOfLines={1}>
-                        {agent.name}
-                      </Text>
-                    </View>
-                  </Pressable>
+                  />
                 ))}
               </View>
             ) : (
@@ -305,10 +430,17 @@ export default function PrometeiDiscoveryScreen({ onClose, onBack }) {
                 <Pressable style={[styles.actionBtnPrimary, styles.actionBtnGap]}>
                   <Text style={styles.actionBtnPrimaryText}>Начать сделку</Text>
                 </Pressable>
-                <Pressable style={styles.actionBtnSecondary}>
+
+                <Pressable style={styles.actionBtnSecondary} onPress={openMapPicker}>
                   <Text style={styles.actionBtnSecondaryText}>Маршрут</Text>
                 </Pressable>
               </View>
+
+              {Platform.OS === 'ios' && (
+                <Pressable style={styles.appleMapBtn} onPress={() => openUrlSafe(buildAppleMapsUrl(selectedAgent))}>
+                  <Text style={styles.appleMapBtnText}>Apple Maps</Text>
+                </Pressable>
+              )}
             </View>
           </ScrollView>
         </View>
@@ -386,7 +518,7 @@ const styles = StyleSheet.create({
   panelScrollContent: {
     paddingHorizontal: 18,
     paddingTop: 18,
-    paddingBottom: 28,
+    paddingBottom: 24,
   },
 
   topCap: {
@@ -543,10 +675,9 @@ const styles = StyleSheet.create({
   },
 
   mapBox: {
-    height: 200,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(108, 214, 255, 0.08)',
+    borderColor: 'rgba(108, 214, 255, 0.10)',
     backgroundColor: 'rgba(4, 16, 48, 0.98)',
     position: 'relative',
     overflow: 'hidden',
@@ -579,77 +710,72 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(108, 214, 255, 0.06)',
   },
 
-  agentPinWrap: {
+  mapAgentCard: {
     position: 'absolute',
-    transform: [{ translateX: -24 }, { translateY: -24 }],
-    alignItems: 'center',
-  },
-
-  agentPulse: {
-    position: 'absolute',
-    top: -4,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    minWidth: 104,
+    maxWidth: 138,
+    minHeight: 46,
+    borderRadius: 16,
     borderWidth: 1,
-    opacity: 0.30,
-    transform: [{ scale: 1.08 }],
+    borderColor: 'rgba(121, 232, 255, 0.18)',
+    backgroundColor: 'rgba(8, 24, 62, 0.94)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    transform: [{ translateX: -30 }, { translateY: -20 }],
   },
 
-  agentPin: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 2,
-    backgroundColor: '#0B1A44',
+  mapAgentCardActive: {
+    borderColor: 'rgba(121, 232, 255, 0.58)',
+    backgroundColor: 'rgba(14, 52, 104, 0.92)',
+  },
+
+  mapAgentDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 8,
     shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
   },
 
-  agentPinActive: {
-    transform: [{ scale: 1.05 }],
-  },
-
-  agentPinCore: {
-    width: '76%',
-    height: '76%',
-    borderRadius: 18,
+  mapAgentDotInner: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  agentPinCoreText: {
-    color: '#071420',
-    fontSize: 13,
+  mapAgentDotText: {
+    color: '#05111F',
+    fontSize: 10,
     fontWeight: '900',
   },
 
-  agentLabel: {
-    marginTop: 6,
-    minWidth: 92,
-    maxWidth: 116,
-    height: 28,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    backgroundColor: 'rgba(10, 28, 74, 0.98)',
-    borderWidth: 1,
-    borderColor: 'rgba(126, 208, 255, 0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  mapAgentInfo: {
+    flex: 1,
   },
 
-  agentLabelText: {
-    color: '#DCE9FB',
+  mapAgentName: {
+    color: '#F6FDFF',
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
+  },
+
+  mapAgentMeta: {
+    color: 'rgba(185, 223, 255, 0.76)',
+    fontSize: 10,
+    marginTop: 2,
   },
 
   listBox: {
     marginBottom: 16,
-    gap: 10,
   },
 
   listRow: {
@@ -809,6 +935,23 @@ const styles = StyleSheet.create({
   },
 
   actionBtnSecondaryText: {
+    color: '#DDF6FF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  appleMapBtn: {
+    marginTop: 10,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: 'rgba(101, 208, 255, 0.12)',
+    backgroundColor: 'rgba(6, 22, 61, 0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  appleMapBtnText: {
     color: '#DDF6FF',
     fontSize: 12,
     fontWeight: '800',
