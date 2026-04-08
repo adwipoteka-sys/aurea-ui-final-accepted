@@ -8,7 +8,6 @@ import {
   PixelRatio,
   useWindowDimensions,
   ScrollView,
-  FlatList,
   Image,
   Alert,
   Linking,
@@ -339,10 +338,11 @@ export default function PrometeiDiscoveryScreen({ onClose, onBack }) {
         <View style={styles.panelInner}>
           <ScrollView
             style={styles.scrollFill}
-            contentContainerStyle={styles.panelScrollContent}
-            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[styles.panelScrollContent, { paddingBottom: 56 }]}
+            showsVerticalScrollIndicator
             keyboardShouldPersistTaps="handled"
-            bounces
+           alwaysBounceVertical
+           bounces
           >
             <View style={styles.topCap} />
 
@@ -365,14 +365,11 @@ export default function PrometeiDiscoveryScreen({ onClose, onBack }) {
 
             <View style={styles.toggleRow}>
               <ModeButton
-  label="Карта"
-  active={mode === 'map'}
-  onPress={() => {
-    setMode('map');
-    openMapPicker();
-  }}
-  style={styles.modeGap}
-/>
+                label="Карта"
+                active={mode === 'map'}
+                onPress={() => setMode('map')}
+                style={styles.modeGap}
+              />
               <ModeButton
                 label="Список"
                 active={mode === 'list'}
@@ -411,22 +408,16 @@ export default function PrometeiDiscoveryScreen({ onClose, onBack }) {
                 ))}
               </View>
             ) : (
-  <View style={[styles.listBox, { maxHeight: stageHeight + 60 }]}>
-    <FlatList
-      data={filtered}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <AgentListRow
-          agent={item}
-          selected={selectedAgent?.id === item.id}
-          onPress={() => setSelectedId(item.id)}
-        />
-      )}
-      showsVerticalScrollIndicator
-      nestedScrollEnabled
-      keyboardShouldPersistTaps="handled"
-      contentContainerStyle={styles.listContent}
-    />
+  ) : (
+  <View style={styles.listBox}>
+    {filtered.map((agent) => (
+      <AgentListRow
+        key={agent.id}
+        agent={agent}
+        selected={selectedAgent?.id === agent.id}
+        onPress={() => setSelectedId(agent.id)}
+      />
+    ))}
   </View>
 )}
 
@@ -466,9 +457,7 @@ const styles = StyleSheet.create({
     zIndex: 50,
   },
 
-  listContent: {
-  paddingBottom: 6,
-},
+  
 
   backCrop: {
     position: 'absolute',
