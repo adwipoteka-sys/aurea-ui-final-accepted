@@ -1,32 +1,32 @@
 # Aurea Mobile UI
 
-Product-grade mobile UI for a global USDT-based payments app built with React Native / Expo.
+Product-grade React Native / Expo mobile interface for a global USDT payments app.
 
-## What this is
-A polished mobile frontend focused on:
-- clean fintech UX
-- consistent visual system
-- reusable screen shell and layout rules
-- pixel-accurate interface behavior across screens
+## Overview
+Aurea is a mobile product UI focused on payment flows, visual consistency, reusable screen composition, and scalable frontend structure.
 
-This repository demonstrates product engineering discipline in UI work: not just visuals, but repeatable layout rules, safe-area handling, interaction geometry, and maintainable screen structure.
+This repository demonstrates product engineering in practice: not only UI implementation, but also screen architecture, layout discipline, and maintainable interaction patterns for a fintech-style mobile app.
+
+## My role
+I designed and implemented the frontend structure, screen composition, reusable UI patterns, and product-facing interaction logic.
+
+## What I built
+- reusable mobile screen shell
+- consistent layout and spacing system
+- payment-style mobile flows
+- scalable UI structure for future product growth
+- polished visual presentation for a fintech-style app
 
 ## Why it matters
-In product teams, beautiful UI is not enough. Screens must stay consistent as the app evolves.  
-This project shows how I package visual quality into a system that can scale without constant regressions.
-
-## Highlights
-- React Native / Expo mobile app
-- source-of-truth UI rules and layout invariants
-- reusable shell / screen composition
-- polished payment-app style flows
-- product-focused visual consistency
+Most frontend portfolios show isolated screens.  
+This project shows how to build a UI that can grow into a real product without collapsing into inconsistency.
 
 ## Demo
 Add here:
 - `demo/demo.gif`
-- `demo/screenshots/`
-- optional short video walkthrough
+- `demo/screenshots/home.png`
+- `demo/screenshots/send.png`
+- `demo/screenshots/profile.png`
 
 ## Tech stack
 - React Native
