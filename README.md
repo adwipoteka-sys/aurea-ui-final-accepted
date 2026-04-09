@@ -10,6 +10,18 @@ The goal of the project is to create a premium user experience for balance overv
 This repository is **not** a static mockup or an isolated design exercise.  
 It represents the **client-facing mobile layer of a broader product system**. The wider Aurea concept includes backend and business-logic integration for balances, transfers, contacts, history, and operational flows. This public repository focuses on the **mobile frontend, UI architecture, and product interaction layer**.
 
+## Demo
+
+### Home
+![Aurea Home](demo/screenshots/home.png)
+
+### Send flow
+![Aurea Send](demo/screenshots/send.png)
+
+### Contacts
+![Aurea Contacts](demo/screenshots/contacts.png)
+
+
 ## What Aurea is
 
 Aurea is a product-oriented mobile application concept and implementation for a modern digital payments experience centered around usability, trust, and visual consistency.
