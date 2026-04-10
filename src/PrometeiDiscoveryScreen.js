@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
   Image,
+  Linking,
   PixelRatio,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -53,6 +56,8 @@ const AGENTS = [
     tint: 'rgba(89, 225, 255, 0.98)',
     initials: 'IV',
     map: { x: 0.21, y: 0.46 },
+    lat: 55.7558,
+    lon: 37.6176,
   },
   {
     id: 'spb-petrova',
@@ -74,6 +79,8 @@ const AGENTS = [
     tint: 'rgba(122, 255, 210, 0.98)',
     initials: 'AP',
     map: { x: 0.42, y: 0.27 },
+    lat: 59.9343,
+    lon: 30.3351,
   },
   {
     id: 'kzn-sidorov',
@@ -95,6 +102,8 @@ const AGENTS = [
     tint: 'rgba(255, 191, 106, 0.98)',
     initials: 'АС',
     map: { x: 0.61, y: 0.54 },
+    lat: 55.7963,
+    lon: 49.1088,
   },
   {
     id: 'dubai-smirnov',
@@ -116,6 +125,8 @@ const AGENTS = [
     tint: 'rgba(165, 143, 255, 0.98)',
     initials: 'НС',
     map: { x: 0.73, y: 0.24 },
+    lat: 25.2048,
+    lon: 55.2708,
   },
   {
     id: 'ekb-mikhailova',
@@ -137,6 +148,8 @@ const AGENTS = [
     tint: 'rgba(255, 148, 128, 0.98)',
     initials: 'АМ',
     map: { x: 0.35, y: 0.64 },
+    lat: 56.8389,
+    lon: 60.6057,
   },
   {
     id: 'hub-almaty',
@@ -158,6 +171,8 @@ const AGENTS = [
     tint: 'rgba(124, 220, 255, 0.98)',
     initials: 'PH',
     map: { x: 0.86, y: 0.56 },
+    lat: 43.2389,
+    lon: 76.8897,
   },
 ];
 
@@ -215,18 +230,17 @@ function getLayout({ width, height, insets }) {
   const panelLeft = px((width - sizePx(clamp(width * (isLandscape ? 0.72 : 0.90), 320, 900))) / 2);
   const panelWidth = sizePx(clamp(width * (isLandscape ? 0.72 : 0.90), 320, 900));
   const panelTop = px(
-    heroTop
-      + heroH
-      + clamp(height * 0.02, 16, 28)
-      - clamp(height * 0.008, 8, 12)
+    heroTop +
+      heroH +
+      clamp(height * 0.02, 16, 28) -
+      clamp(height * 0.008, 8, 12)
   );
-  const panelBottomGap = clamp(height * (isLandscape ? 0.05 : 0.045), 28, 42);
+
+  const panelBottomGap = clamp(height * (isLandscape ? 0.085 : 0.075), 52, 80);
   const panelHeight = sizePx(Math.max(300, navTop - panelTop - panelBottomGap));
 
   const backSize = sizePx(
-    isLandscape
-      ? clamp(width * 0.085, 54, 74)
-      : clamp(width * 0.14, 58, 76),
+    isLandscape ? clamp(width * 0.085, 54, 74) : clamp(width * 0.14, 58, 76),
   );
 
   return {
@@ -263,6 +277,61 @@ function getLayout({ width, height, insets }) {
   };
 }
 
+function buildGoogleMapsUrl(agent) {
+  return `https://www.google.com/maps/dir/?api=1&destination=${agent.lat},${agent.lon}&travelmode=driving`;
+}
+
+function buildYandexMapsUrl(agent) {
+  return `https://yandex.ru/maps/?rtext=~${agent.lat},${agent.lon}&rtt=auto`;
+}
+
+function buildAppleMapsUrl(agent) {
+  return `http://maps.apple.com/?daddr=${agent.lat},${agent.lon}&dirflg=d`;
+}
+
+async function openUrlSafe(url) {
+  try {
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      await Linking.openURL(url);
+      return;
+    }
+    await Linking.openURL(url);
+  } catch {
+    Alert.alert('Не удалось открыть карты');
+  }
+}
+
+function openExternalRoute(agent) {
+  Alert.alert(
+    'Открыть маршрут',
+    `${agent.name} · ${agent.city}`,
+    [
+      {
+        text: 'Google Maps',
+        onPress: () => openUrlSafe(buildGoogleMapsUrl(agent)),
+      },
+      {
+        text: 'Яндекс.Карты',
+        onPress: () => openUrlSafe(buildYandexMapsUrl(agent)),
+      },
+      ...(Platform.OS === 'ios'
+        ? [
+            {
+              text: 'Apple Maps',
+              onPress: () => openUrlSafe(buildAppleMapsUrl(agent)),
+            },
+          ]
+        : []),
+      {
+        text: 'Отмена',
+        style: 'cancel',
+      },
+    ],
+    { cancelable: true }
+  );
+}
+
 function NavHitRow({ nav, onSelect }) {
   return (
     <View
@@ -277,10 +346,10 @@ function NavHitRow({ nav, onSelect }) {
         },
       ]}
     >
-      <Pressable style={styles.navHit} hitSlop={12} onPress={() => onSelect('home')} accessibilityRole="button" accessibilityLabel="Главная" />
-      <Pressable style={styles.navHit} hitSlop={12} onPress={() => onSelect('send')} accessibilityRole="button" accessibilityLabel="Отправить" />
-      <Pressable style={styles.navHit} hitSlop={12} onPress={() => onSelect('contacts')} accessibilityRole="button" accessibilityLabel="Контакты" />
-      <Pressable style={styles.navHit} hitSlop={12} onPress={() => onSelect('history')} accessibilityRole="button" accessibilityLabel="История" />
+      <Pressable style={styles.navHit} hitSlop={12} onPress={() => onSelect?.('home')} accessibilityRole="button" accessibilityLabel="Главная" />
+      <Pressable style={styles.navHit} hitSlop={12} onPress={() => onSelect?.('send')} accessibilityRole="button" accessibilityLabel="Отправить" />
+      <Pressable style={styles.navHit} hitSlop={12} onPress={() => onSelect?.('contacts')} accessibilityRole="button" accessibilityLabel="Контакты" />
+      <Pressable style={styles.navHit} hitSlop={12} onPress={() => onSelect?.('history')} accessibilityRole="button" accessibilityLabel="История" />
     </View>
   );
 }
@@ -318,12 +387,8 @@ function CtaPill({ label, onPress }) {
   );
 }
 
-function AgentPin({ agent, mapFrame, selected, onPress }) {
+function AgentPin({ agent, selected, onPress }) {
   const pinSize = selected ? px(42) : px(36);
-  const bubbleW = px(70);
-  const bubbleH = px(22);
-  const left = px(mapFrame.left + mapFrame.width * agent.map.x - pinSize / 2);
-  const top = px(mapFrame.top + mapFrame.height * agent.map.y - pinSize / 2);
 
   return (
     <Pressable
@@ -332,21 +397,36 @@ function AgentPin({ agent, mapFrame, selected, onPress }) {
       style={[
         styles.pinWrap,
         {
-          left,
-          top,
+          left: `${agent.map.x * 100}%`,
+          top: `${agent.map.y * 100}%`,
+          transform: [{ translateX: -pinSize / 2 }, { translateY: -pinSize / 2 }],
           width: pinSize,
-          height: pinSize + bubbleH + 8,
         },
       ]}
     >
-      {selected && <View style={[styles.pinPulse, { borderColor: agent.tint }]} />}
-      <View style={[styles.pinBody, { width: pinSize, height: pinSize, borderColor: agent.tint, shadowColor: agent.tint }, selected && styles.pinBodySelected]}>
+      {selected ? <View style={[styles.pinPulse, { borderColor: agent.tint }]} /> : null}
+
+      <View
+        style={[
+          styles.pinBody,
+          {
+            width: pinSize,
+            height: pinSize,
+            borderColor: agent.tint,
+            shadowColor: agent.tint,
+          },
+          selected && styles.pinBodySelected,
+        ]}
+      >
         <View style={[styles.pinCore, { backgroundColor: agent.tint }]}>
           <Text style={styles.pinCoreText}>{agent.initials}</Text>
         </View>
       </View>
-      <View style={[styles.pinBubble, { width: bubbleW, height: bubbleH, left: px((pinSize - bubbleW) / 2) }]}>
-        <Text style={styles.pinBubbleText}>{agent.name}</Text>
+
+      <View style={styles.pinBubble}>
+        <Text numberOfLines={1} style={styles.pinBubbleText}>
+          {agent.name}
+        </Text>
       </View>
     </Pressable>
   );
@@ -459,14 +539,22 @@ function AgentFocusCard({ agent, note, onAction }) {
   );
 }
 
-function MapStage({ agents, selectedAgent, onSelect }) {
-  const mapFrame = useMemo(
-    () => ({ left: 0, top: 0, width: 1, height: 1 }),
-    [],
-  );
+function MapStage({ agents, selectedAgent, onSelect, height }) {
+  if (!agents.length) {
+    return (
+      <View style={[styles.mapStageWrap, { height }]}>
+        <View style={styles.mapSurface}>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>Ничего не найдено</Text>
+            <Text style={styles.emptyBody}>Сними фильтр или попробуй другой город/способ обмена.</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.mapStageWrap}>
+    <View style={[styles.mapStageWrap, { height }]}>
       <View style={styles.mapSurface}>
         {Array.from({ length: 6 }).map((_, index) => (
           <View key={`h-${index}`} style={[styles.gridLineH, { top: `${(index + 1) * 14}%` }]} />
@@ -482,7 +570,7 @@ function MapStage({ agents, selectedAgent, onSelect }) {
           </View>
         </View>
 
-        {selectedAgent && (
+        {selectedAgent ? (
           <View
             pointerEvents="none"
             style={[
@@ -493,27 +581,16 @@ function MapStage({ agents, selectedAgent, onSelect }) {
               },
             ]}
           />
-        )}
+        ) : null}
 
         <View style={StyleSheet.absoluteFill}>
           {agents.map((agent) => (
-            <View
+            <AgentPin
               key={agent.id}
-              style={[
-                styles.pinAbsolute,
-                {
-                  left: `${agent.map.x * 100}%`,
-                  top: `${agent.map.y * 100}%`,
-                },
-              ]}
-            >
-              <AgentPin
-                agent={agent}
-                mapFrame={mapFrame}
-                selected={selectedAgent?.id === agent.id}
-                onPress={() => onSelect(agent.id)}
-              />
-            </View>
+              agent={agent}
+              selected={selectedAgent?.id === agent.id}
+              onPress={() => onSelect(agent.id)}
+            />
           ))}
         </View>
 
@@ -533,7 +610,9 @@ export default function PrometeiDiscoveryScreen({ onBack, onSelect }) {
   const [viewMode, setViewMode] = useState('map');
   const [activeFilters, setActiveFilters] = useState(['nearby']);
   const [selectedId, setSelectedId] = useState(AGENTS[0].id);
-  const [note, setNote] = useState('Выбери Прометея на карте, чтобы быстро открыть безопасную сделку, или нажми «Стать Прометеем», чтобы подать заявку в сеть AUREA.');
+  const [note, setNote] = useState(
+    'Выбери Прометея на карте, чтобы быстро открыть безопасную сделку, или нажми «Стать Прометеем», чтобы подать заявку в сеть AUREA.'
+  );
 
   const layout = useMemo(() => {
     if (!width || !height) return null;
@@ -567,16 +646,10 @@ export default function PrometeiDiscoveryScreen({ onBack, onSelect }) {
   }, [selectedAgent, selectedId]);
 
   const stats = useMemo(() => {
-    if (!filteredAgents.length) {
-      return ['0 офферов', '0 онлайн'];
-    }
+    if (!filteredAgents.length) return ['0 офферов', '0 онлайн'];
 
     const onlineCount = filteredAgents.filter((agent) => agent.online).length;
-
-    return [
-      `${filteredAgents.length} офферов`,
-      `${onlineCount} онлайн`,
-    ];
+    return [`${filteredAgents.length} офферов`, `${onlineCount} онлайн`];
   }, [filteredAgents]);
 
   const handleFilterToggle = (key) => {
@@ -589,14 +662,17 @@ export default function PrometeiDiscoveryScreen({ onBack, onSelect }) {
   };
 
   const handleBecomePrometei = () => {
-    setNote('Открыта анкета Прометея: укажи город, способы обмена, резерв и пройди быструю проверку профиля, чтобы принимать сделки рядом.');
+    setNote(
+      'Открыта анкета Прометея: укажи город, способы обмена, резерв и пройди быструю проверку профиля, чтобы принимать сделки рядом.'
+    );
   };
 
   const handleAction = (type, agent) => {
     if (!agent) return;
 
     if (type === 'route') {
-      setNote(`Маршрут до ${agent.name} построен. Точка обмена: ${agent.city}, ${agent.distanceKm.toFixed(1)} км.`);
+      setNote(`Открываем внешний маршрут до ${agent.name} · ${agent.city}.`);
+      openExternalRoute(agent);
       return;
     }
 
@@ -618,6 +694,8 @@ export default function PrometeiDiscoveryScreen({ onBack, onSelect }) {
   if (!layout) {
     return <View style={styles.root} />;
   }
+
+  const stageHeight = sizePx(clamp(layout.panel.height * (layout.isLandscape ? 0.36 : 0.30), 180, 250));
 
   return (
     <View style={styles.root}>
@@ -647,10 +725,26 @@ export default function PrometeiDiscoveryScreen({ onBack, onSelect }) {
           <View style={styles.panelRimBottom} pointerEvents="none" />
           <View style={styles.topGlow} pointerEvents="none" />
 
-          <View style={[styles.panelContent, { paddingHorizontal: layout.panel.padding, paddingTop: layout.panel.padding, paddingBottom: px(20) }]}>
+          <ScrollView
+            style={styles.panelScroll}
+            contentContainerStyle={[
+              styles.panelContent,
+              {
+                paddingHorizontal: layout.panel.padding,
+                paddingTop: layout.panel.padding,
+                paddingBottom: px(34),
+              },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            alwaysBounceVertical
+            bounces
+          >
             <View style={styles.titleBlock}>
               <Text style={styles.panelTitle}>Прометеи</Text>
-              <Text style={styles.panelSubtitle}>Карта агентов рядом, рейтинг, резерв и безопасный старт сделки</Text>
+              <Text style={styles.panelSubtitle}>
+                Карта агентов рядом, рейтинг, резерв и безопасный старт сделки
+              </Text>
             </View>
 
             <View style={styles.searchWrap}>
@@ -690,9 +784,14 @@ export default function PrometeiDiscoveryScreen({ onBack, onSelect }) {
 
             <View style={styles.bodyArea}>
               {viewMode === 'map' ? (
-                <MapStage agents={filteredAgents} selectedAgent={selectedAgent} onSelect={setSelectedId} />
+                <MapStage
+                  agents={filteredAgents}
+                  selectedAgent={selectedAgent}
+                  onSelect={setSelectedId}
+                  height={stageHeight}
+                />
               ) : (
-                <ScrollView style={styles.listScroll} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
+                <View style={styles.listStage}>
                   {filteredAgents.length ? (
                     filteredAgents.map((agent) => (
                       <AgentListRow
@@ -708,12 +807,12 @@ export default function PrometeiDiscoveryScreen({ onBack, onSelect }) {
                       <Text style={styles.emptyBody}>Сними фильтр или попробуй другой город/способ обмена.</Text>
                     </View>
                   )}
-                </ScrollView>
+                </View>
               )}
             </View>
 
             <AgentFocusCard agent={selectedAgent} note={note} onAction={handleAction} />
-          </View>
+          </ScrollView>
         </View>
       </View>
     </View>
@@ -831,9 +930,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(116, 223, 255, 0.22)',
     borderRadius: 24,
   },
-  panelContent: {
+  panelScroll: {
     flex: 1,
   },
+  panelContent: {},
   titleBlock: {
     marginBottom: 14,
   },
@@ -988,12 +1088,9 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   bodyArea: {
-    flex: 1,
-    minHeight: 180,
+    marginBottom: 14,
   },
-  mapStageWrap: {
-    flex: 1,
-  },
+  mapStageWrap: {},
   mapSurface: {
     flex: 1,
     borderRadius: 24,
@@ -1058,10 +1155,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(98, 221, 255, 0.32)',
     borderRadius: 2,
   },
-  pinAbsolute: {
-    position: 'absolute',
-    transform: [{ translateX: -18 }, { translateY: -18 }],
-  },
   pinWrap: {
     position: 'absolute',
     alignItems: 'center',
@@ -1103,8 +1196,10 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   pinBubble: {
-    position: 'absolute',
-    top: 42,
+    marginTop: 6,
+    minWidth: 84,
+    maxWidth: 110,
+    height: 22,
     borderRadius: 11,
     backgroundColor: 'rgba(5, 18, 56, 0.95)',
     borderWidth: 1,
@@ -1130,11 +1225,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
-  listScroll: {
-    flex: 1,
-  },
-  listContent: {
-    paddingBottom: 8,
+  listStage: {
     gap: 10,
   },
   listRow: {
@@ -1412,6 +1503,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
+    marginTop: 8,
   },
   emptyTitle: {
     color: '#F7FDFF',
