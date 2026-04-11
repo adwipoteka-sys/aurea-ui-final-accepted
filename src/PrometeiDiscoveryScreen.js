@@ -20,13 +20,19 @@ const px = (value) => round(value);
 const sizePx = (value) => round(Math.max(0, value));
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
-const BG = require('../assets/foundation/chrome/background-only.png');
-const HERO = require('../assets/foundation/chrome/hero.png');
-const NAV_HOME = require('../assets/foundation/chrome/nav-home.png');
+/*
+  Если сборка скажет cannot find module,
+  поменяй только эти 2 пути на свои реальные exact PNG.
+*/
+const HOME_EXACT = require('../assets/foundation/reference/home-v13-exact-4k.png');
+const SEND_EXACT = require('../assets/exact/send-v13-chrome.png');
 
-const BG_META = Image.resolveAssetSource(BG);
-const HERO_META = Image.resolveAssetSource(HERO);
-const NAV_META = Image.resolveAssetSource(NAV_HOME);
+const HOME_META = Image.resolveAssetSource(HOME_EXACT);
+const SEND_META = Image.resolveAssetSource(SEND_EXACT);
+
+// Координаты меню и back-кнопки в нормализованной системе exact-артов
+const NAV_ROW = { x: 0.0576, y: 0.7407, w: 0.8848, h: 0.0812 };
+const BACK_RECT = { x: 0.0382, y: 0.0732, w: 0.2484, h: 0.1025 };
 
 const FILTERS = [
   { key: 'nearby', label: 'Рядом' },
@@ -200,80 +206,12 @@ function getCoverFrame({ width, height, meta, focalX = 0.5, focalY = 0.5 }) {
   };
 }
 
-function getLayout({ width, height, insets }) {
-  const mode = getMode(width, height);
-  const isLandscape = mode === 'phoneLandscape' || mode === 'tabletLandscape';
-  const isTabletLike = mode === 'tabletPortrait' || mode === 'tabletLandscape';
-
-  const bg = getCoverFrame({ width, height, meta: BG_META });
-
-  const heroW = sizePx(
-    isLandscape
-      ? clamp(width * (isTabletLike ? 0.20 : 0.22), 150, 250)
-      : clamp(width * 0.46, 220, 430),
-  );
-  const heroH = sizePx(heroW * (HERO_META.height / HERO_META.width));
-  const heroLeft = isLandscape
-    ? px(clamp(width * 0.045, 16, 48))
-    : px((width - heroW) / 2);
-  const heroTop = px(insets.top + clamp(height * 0.02, 18, 40));
-
-  const navW = sizePx(
-    isLandscape
-      ? clamp(width * (isTabletLike ? 0.52 : 0.62), 320, 620)
-      : clamp(width * (isTabletLike ? 0.74 : 0.89), 300, 540),
-  );
-  const navH = sizePx(navW * (NAV_META.height / NAV_META.width));
-  const navLeft = px((width - navW) / 2);
-  const navTop = px(height - insets.bottom - clamp(height * 0.045, 24, 52) - navH);
-
-  const panelLeft = px((width - sizePx(clamp(width * (isLandscape ? 0.72 : 0.90), 320, 900))) / 2);
-  const panelWidth = sizePx(clamp(width * (isLandscape ? 0.72 : 0.90), 320, 900));
-  const panelTop = px(
-    heroTop +
-      heroH +
-      clamp(height * 0.02, 16, 28) -
-      clamp(height * 0.008, 8, 12)
-  );
-
-  const panelBottomGap = clamp(height * (isLandscape ? 0.085 : 0.075), 52, 80);
-  const panelHeight = sizePx(Math.max(300, navTop - panelTop - panelBottomGap));
-
-  const backSize = sizePx(
-    isLandscape ? clamp(width * 0.085, 54, 74) : clamp(width * 0.14, 58, 76),
-  );
-
+function rectFromNorm(frame, rect) {
   return {
-    mode,
-    isLandscape,
-    bg,
-    hero: {
-      width: heroW,
-      height: heroH,
-      left: heroLeft,
-      top: heroTop,
-    },
-    nav: {
-      width: navW,
-      height: navH,
-      left: navLeft,
-      top: navTop,
-    },
-    panel: {
-      left: panelLeft,
-      top: panelTop,
-      width: panelWidth,
-      height: panelHeight,
-      radius: px(clamp(panelWidth * 0.055, 24, 34)),
-      padding: px(clamp(panelWidth * 0.05, 16, 28)),
-    },
-    back: {
-      width: backSize,
-      height: backSize,
-      left: px(clamp(width * 0.045, 14, 38)),
-      top: px(heroTop + heroH * (isLandscape ? 0.10 : 0.16)),
-      radius: px(backSize * 0.28),
-    },
+    left: px(frame.left + frame.width * rect.x),
+    top: px(frame.top + frame.height * rect.y),
+    width: px(frame.width * rect.w),
+    height: px(frame.height * rect.h),
   };
 }
 
@@ -332,17 +270,59 @@ function openExternalRoute(agent) {
   );
 }
 
-function NavHitRow({ nav, onSelect }) {
+function getLayout({ width, height, insets }) {
+  const mode = getMode(width, height);
+  const isLandscape = mode === 'phoneLandscape' || mode === 'tabletLandscape';
+
+  const baseFrame = getCoverFrame({ width, height, meta: HOME_META });
+  const sendFrame = getCoverFrame({ width, height, meta: SEND_META });
+  const navFrame = rectFromNorm(baseFrame, NAV_ROW);
+
+  const panelWidth = sizePx(clamp(width * (isLandscape ? 0.72 : 0.90), 320, 900));
+  const panelLeft = px((width - panelWidth) / 2);
+
+  const panelTop = px(
+    Math.max(
+      baseFrame.top + baseFrame.height * 0.228,
+      insets.top + 142
+    )
+  );
+
+  // Чуть больше зазор до меню, чтобы солнце было видно
+  const panelBottomGap = px(clamp(height * (isLandscape ? 0.08 : 0.072), 54, 78));
+  const panelHeight = sizePx(Math.max(360, navFrame.top - panelTop - panelBottomGap));
+
+  const panelRadius = px(clamp(panelWidth * 0.055, 24, 34));
+  const panelPadding = px(clamp(panelWidth * 0.05, 16, 28));
+
+  return {
+    mode,
+    isLandscape,
+    baseFrame,
+    sendFrame,
+    navFrame,
+    panelFrame: {
+      left: panelLeft,
+      top: panelTop,
+      width: panelWidth,
+      height: panelHeight,
+    },
+    panelRadius,
+    panelPadding,
+  };
+}
+
+function NavHitRow({ navFrame, onSelect }) {
   return (
     <View
       pointerEvents="box-none"
       style={[
         styles.navHitRow,
         {
-          left: nav.left,
-          top: nav.top,
-          width: nav.width,
-          height: nav.height,
+          left: navFrame.left,
+          top: navFrame.top,
+          width: navFrame.width,
+          height: navFrame.height,
         },
       ]}
     >
@@ -351,6 +331,41 @@ function NavHitRow({ nav, onSelect }) {
       <Pressable style={styles.navHit} hitSlop={12} onPress={() => onSelect?.('contacts')} accessibilityRole="button" accessibilityLabel="Контакты" />
       <Pressable style={styles.navHit} hitSlop={12} onPress={() => onSelect?.('history')} accessibilityRole="button" accessibilityLabel="История" />
     </View>
+  );
+}
+
+function ExactBackButton({ sendFrame, onPress }) {
+  const rect = rectFromNorm(sendFrame, BACK_RECT);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={12}
+      accessibilityRole="button"
+      accessibilityLabel="Назад"
+      style={[
+        styles.backCrop,
+        {
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height,
+        },
+      ]}
+    >
+      <Image
+        source={SEND_EXACT}
+        resizeMode="stretch"
+        style={{
+          position: 'absolute',
+          left: sendFrame.left - rect.left,
+          top: sendFrame.top - rect.top,
+          width: sendFrame.width,
+          height: sendFrame.height,
+        }}
+        pointerEvents="none"
+      />
+    </Pressable>
   );
 }
 
@@ -695,32 +710,44 @@ export default function PrometeiDiscoveryScreen({ onBack, onSelect }) {
     return <View style={styles.root} />;
   }
 
-  const stageHeight = sizePx(clamp(layout.panel.height * (layout.isLandscape ? 0.36 : 0.30), 180, 250));
+  const stageHeight = sizePx(
+    clamp(layout.panelFrame.height * (layout.isLandscape ? 0.36 : 0.30), 180, 250)
+  );
 
   return (
     <View style={styles.root}>
-      <Image source={BG} resizeMode="stretch" style={[styles.abs, layout.bg]} pointerEvents="none" />
-      <Image source={HERO} resizeMode="contain" style={[styles.abs, layout.hero]} pointerEvents="none" />
-      <Image source={NAV_HOME} resizeMode="stretch" style={[styles.abs, layout.nav]} pointerEvents="none" />
-      <NavHitRow nav={layout.nav} onSelect={onSelect} />
+      <Image
+        source={HOME_EXACT}
+        resizeMode="stretch"
+        style={[styles.abs, layout.baseFrame]}
+        pointerEvents="none"
+      />
 
-      <Pressable
-        onPress={onBack}
-        hitSlop={10}
-        accessibilityRole="button"
-        accessibilityLabel="Назад"
-        style={[styles.backWrap, layout.back]}
+      <View
+        pointerEvents="none"
+        style={[
+          styles.panelUnderlay,
+          {
+            left: layout.panelFrame.left - 10,
+            top: layout.panelFrame.top - 12,
+            width: layout.panelFrame.width + 20,
+            height: layout.panelFrame.height + 22,
+            borderRadius: layout.panelRadius + 10,
+          },
+        ]}
+      />
+
+      <NavHitRow navFrame={layout.navFrame} onSelect={onSelect} />
+      <ExactBackButton sendFrame={layout.sendFrame} onPress={onBack} />
+
+      <View
+        style={[
+          styles.panelOuter,
+          layout.panelFrame,
+          { borderRadius: layout.panelRadius + 6 },
+        ]}
       >
-        <View style={styles.backPlate} />
-        <View style={styles.backTopSheen} pointerEvents="none" />
-        <View style={styles.backCornerGlow} pointerEvents="none" />
-        <View style={styles.backInner}>
-          <Text style={styles.backArrow}>←</Text>
-        </View>
-      </Pressable>
-
-      <View style={[styles.panelOuter, layout.panel]}>
-        <View style={[styles.panelInner, { borderRadius: layout.panel.radius }]}>
+        <View style={[styles.panelInner, { borderRadius: layout.panelRadius }]}>
           <View style={styles.panelRimTop} pointerEvents="none" />
           <View style={styles.panelRimBottom} pointerEvents="none" />
           <View style={styles.topGlow} pointerEvents="none" />
@@ -730,9 +757,9 @@ export default function PrometeiDiscoveryScreen({ onBack, onSelect }) {
             contentContainerStyle={[
               styles.panelContent,
               {
-                paddingHorizontal: layout.panel.padding,
-                paddingTop: layout.panel.padding,
-                paddingBottom: px(34),
+                paddingHorizontal: layout.panelPadding,
+                paddingTop: layout.panelPadding,
+                paddingBottom: px(40),
               },
             ]}
             showsVerticalScrollIndicator={false}
@@ -760,11 +787,23 @@ export default function PrometeiDiscoveryScreen({ onBack, onSelect }) {
             </View>
 
             <View style={styles.toggleRow}>
-              <ToggleButton label="Карта" active={viewMode === 'map'} onPress={() => setViewMode('map')} />
-              <ToggleButton label="Список" active={viewMode === 'list'} onPress={() => setViewMode('list')} />
+              <ToggleButton
+                label="Карта"
+                active={viewMode === 'map'}
+                onPress={() => setViewMode('map')}
+              />
+              <ToggleButton
+                label="Список"
+                active={viewMode === 'list'}
+                onPress={() => setViewMode('list')}
+              />
             </View>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filtersRow}
+            >
               {FILTERS.map((item) => (
                 <FilterChip
                   key={item.key}
@@ -825,86 +864,55 @@ const styles = StyleSheet.create({
     backgroundColor: '#020814',
     overflow: 'hidden',
   },
+
   abs: {
     position: 'absolute',
   },
+
   navHitRow: {
     position: 'absolute',
     flexDirection: 'row',
+    zIndex: 20,
   },
+
   navHit: {
     flex: 1,
   },
-  backWrap: {
+
+  backCrop: {
     position: 'absolute',
-    overflow: 'visible',
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: 'hidden',
+    borderRadius: 12,
+    zIndex: 40,
   },
-  backPlate: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 20,
-    backgroundColor: 'rgba(4, 16, 52, 0.94)',
-    borderWidth: 1,
-    borderColor: 'rgba(109, 219, 255, 0.70)',
-    shadowColor: '#43C7FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.26,
-    shadowRadius: 14,
-    elevation: 8,
-  },
-  backTopSheen: {
+
+  panelUnderlay: {
     position: 'absolute',
-    top: 5,
-    width: '42%',
-    height: 2,
-    borderRadius: 2,
-    backgroundColor: 'rgba(154, 238, 255, 0.60)',
+    backgroundColor: 'rgba(3, 10, 27, 0.18)',
   },
-  backCornerGlow: {
-    position: 'absolute',
-    left: -4,
-    bottom: -4,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(38, 132, 255, 0.84)',
-    shadowColor: '#2E88FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.42,
-    shadowRadius: 10,
-  },
-  backInner: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backArrow: {
-    color: '#F3FBFF',
-    fontSize: 31,
-    fontWeight: '800',
-    marginLeft: -2,
-  },
+
   panelOuter: {
     position: 'absolute',
     borderWidth: 1,
     borderColor: 'rgba(96, 208, 255, 0.78)',
-    backgroundColor: 'rgba(3, 9, 35, 0.24)',
+    backgroundColor: 'rgba(3, 9, 35, 0.18)',
     shadowColor: '#59DFFF',
     shadowOpacity: 0.30,
     shadowRadius: 19,
     shadowOffset: { width: 0, height: 0 },
     elevation: 10,
     overflow: 'hidden',
+    zIndex: 30,
   },
+
   panelInner: {
     flex: 1,
-    backgroundColor: 'rgba(5, 14, 48, 0.78)',
+    backgroundColor: 'rgba(5, 14, 48, 0.90)',
     borderWidth: 1,
     borderColor: 'rgba(128, 223, 255, 0.16)',
     overflow: 'hidden',
   },
+
   panelRimTop: {
     position: 'absolute',
     left: '10%',
@@ -913,6 +921,7 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(183, 241, 255, 0.18)',
   },
+
   panelRimBottom: {
     position: 'absolute',
     left: '12%',
@@ -921,6 +930,7 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(95, 206, 255, 0.10)',
   },
+
   topGlow: {
     position: 'absolute',
     left: '18%',
@@ -930,13 +940,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(116, 223, 255, 0.22)',
     borderRadius: 24,
   },
+
   panelScroll: {
     flex: 1,
   },
+
   panelContent: {},
+
   titleBlock: {
     marginBottom: 14,
   },
+
   panelTitle: {
     color: '#F7FDFF',
     fontSize: 34,
@@ -946,6 +960,7 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 12,
   },
+
   panelSubtitle: {
     marginTop: 6,
     color: 'rgba(188, 228, 255, 0.84)',
@@ -953,6 +968,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
+
   searchWrap: {
     height: 50,
     borderRadius: 18,
@@ -967,23 +983,27 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 0 },
   },
+
   searchIcon: {
     color: 'rgba(225, 245, 255, 0.85)',
     fontSize: 24,
     marginRight: 8,
   },
+
   searchInput: {
     flex: 1,
     color: '#F3FCFF',
     fontSize: 16,
     paddingVertical: 0,
   },
+
   toggleRow: {
     flexDirection: 'row',
     marginTop: 14,
     marginBottom: 10,
     gap: 10,
   },
+
   toggleBtn: {
     flex: 1,
     height: 42,
@@ -994,6 +1014,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   toggleBtnActive: {
     borderColor: 'rgba(121, 232, 255, 0.78)',
     backgroundColor: 'rgba(18, 62, 118, 0.92)',
@@ -1002,18 +1023,22 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 0 },
   },
+
   toggleText: {
     color: 'rgba(192, 226, 255, 0.8)',
     fontWeight: '700',
     fontSize: 14,
   },
+
   toggleTextActive: {
     color: '#FFFFFF',
   },
+
   filtersRow: {
     paddingVertical: 4,
     gap: 8,
   },
+
   filterChip: {
     height: 34,
     paddingHorizontal: 14,
@@ -1024,18 +1049,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   filterChipActive: {
     backgroundColor: 'rgba(20, 83, 150, 0.9)',
     borderColor: 'rgba(122, 233, 255, 0.8)',
   },
+
   filterText: {
     color: 'rgba(191, 226, 255, 0.82)',
     fontSize: 13,
     fontWeight: '700',
   },
+
   filterTextActive: {
     color: '#FFFFFF',
   },
+
   statsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1043,6 +1072,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 12,
   },
+
   statPill: {
     paddingHorizontal: 10,
     height: 28,
@@ -1053,11 +1083,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   statPillText: {
     color: 'rgba(196, 229, 255, 0.82)',
     fontSize: 12,
     fontWeight: '700',
   },
+
   ctaPill: {
     minWidth: 166,
     height: 30,
@@ -1074,6 +1106,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 0 },
   },
+
   ctaPillSheen: {
     position: 'absolute',
     left: '16%',
@@ -1082,15 +1115,19 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(186, 243, 255, 0.42)',
   },
+
   ctaPillText: {
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '900',
   },
+
   bodyArea: {
     marginBottom: 14,
   },
+
   mapStageWrap: {},
+
   mapSurface: {
     flex: 1,
     borderRadius: 24,
@@ -1103,6 +1140,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 0 },
   },
+
   gridLineH: {
     position: 'absolute',
     left: 0,
@@ -1110,6 +1148,7 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(108, 214, 255, 0.08)',
   },
+
   gridLineV: {
     position: 'absolute',
     top: 0,
@@ -1117,12 +1156,14 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: 'rgba(108, 214, 255, 0.08)',
   },
+
   userMarkerWrap: {
     position: 'absolute',
     left: '8%',
     bottom: '12%',
     alignItems: 'center',
   },
+
   userMarkerPulse: {
     position: 'absolute',
     width: 34,
@@ -1132,6 +1173,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(94, 225, 255, 0.25)',
     transform: [{ scale: 1.3 }],
   },
+
   userMarker: {
     minWidth: 42,
     height: 24,
@@ -1143,11 +1185,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 10,
   },
+
   userMarkerText: {
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '800',
   },
+
   routeLine: {
     position: 'absolute',
     left: '10%',
@@ -1155,10 +1199,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(98, 221, 255, 0.32)',
     borderRadius: 2,
   },
+
   pinWrap: {
     position: 'absolute',
     alignItems: 'center',
   },
+
   pinPulse: {
     position: 'absolute',
     top: 0,
@@ -1169,6 +1215,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
     transform: [{ scale: 1.1 }],
   },
+
   pinBody: {
     borderRadius: 999,
     borderWidth: 1,
@@ -1180,9 +1227,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     elevation: 8,
   },
+
   pinBodySelected: {
     borderWidth: 2,
   },
+
   pinCore: {
     width: '78%',
     height: '78%',
@@ -1190,11 +1239,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   pinCoreText: {
     color: '#061527',
     fontSize: 12,
     fontWeight: '900',
   },
+
   pinBubble: {
     marginTop: 6,
     minWidth: 84,
@@ -1208,11 +1259,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 8,
   },
+
   pinBubbleText: {
     color: 'rgba(228, 247, 255, 0.9)',
     fontSize: 10,
     fontWeight: '700',
   },
+
   mapLegend: {
     position: 'absolute',
     left: 12,
@@ -1220,14 +1273,17 @@ const styles = StyleSheet.create({
     bottom: 10,
     alignItems: 'center',
   },
+
   mapLegendText: {
     color: 'rgba(194, 229, 255, 0.62)',
     fontSize: 11,
     fontWeight: '600',
   },
+
   listStage: {
     gap: 10,
   },
+
   listRow: {
     minHeight: 88,
     borderRadius: 20,
@@ -1239,10 +1295,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+
   listRowSelected: {
     borderColor: 'rgba(117, 232, 255, 0.74)',
     backgroundColor: 'rgba(14, 52, 104, 0.9)',
   },
+
   rowAvatar: {
     width: 48,
     height: 48,
@@ -1255,6 +1313,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 0 },
   },
+
   rowAvatarCore: {
     width: 36,
     height: 36,
@@ -1262,14 +1321,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   rowAvatarText: {
     color: '#05111F',
     fontSize: 12,
     fontWeight: '900',
   },
+
   rowBody: {
     flex: 1,
   },
+
   rowTop: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1277,12 +1339,14 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     gap: 10,
   },
+
   rowName: {
     flex: 1,
     color: '#F6FDFF',
     fontSize: 16,
     fontWeight: '800',
   },
+
   statusPill: {
     height: 26,
     borderRadius: 13,
@@ -1291,33 +1355,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+
   statusOnline: {
     backgroundColor: 'rgba(41, 146, 94, 0.22)',
   },
+
   statusOffline: {
     backgroundColor: 'rgba(165, 106, 46, 0.18)',
   },
+
   statusDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
   },
+
   statusDotOnline: {
     backgroundColor: '#4AFF9C',
   },
+
   statusDotOffline: {
     backgroundColor: '#FFB868',
   },
+
   statusPillText: {
     color: '#EAF8FF',
     fontSize: 11,
     fontWeight: '800',
   },
+
   rowMeta: {
     color: 'rgba(185, 223, 255, 0.72)',
     fontSize: 12,
     lineHeight: 16,
   },
+
   rowBottom: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1325,26 +1397,31 @@ const styles = StyleSheet.create({
     marginTop: 6,
     flexWrap: 'wrap',
   },
+
   rowRate: {
     color: '#8BE7FF',
     fontSize: 12,
     fontWeight: '800',
   },
+
   rowRating: {
     color: '#FFD977',
     fontSize: 12,
     fontWeight: '800',
   },
+
   rowDistance: {
     color: 'rgba(207, 236, 255, 0.8)',
     fontSize: 12,
     fontWeight: '700',
   },
+
   rowChevron: {
     color: 'rgba(215, 241, 255, 0.76)',
     fontSize: 28,
     marginLeft: 10,
   },
+
   focusCard: {
     marginTop: 14,
     padding: 16,
@@ -1358,6 +1435,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     overflow: 'hidden',
   },
+
   focusCardGlow: {
     position: 'absolute',
     right: -18,
@@ -1367,6 +1445,7 @@ const styles = StyleSheet.create({
     borderRadius: 55,
     backgroundColor: 'rgba(78, 182, 255, 0.08)',
   },
+
   focusCardLine: {
     position: 'absolute',
     left: 16,
@@ -1375,22 +1454,26 @@ const styles = StyleSheet.create({
     height: 2,
     backgroundColor: 'rgba(153, 239, 255, 0.34)',
   },
+
   focusTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 12,
   },
+
   focusTitle: {
     color: '#F7FDFF',
     fontSize: 18,
     fontWeight: '900',
   },
+
   focusMeta: {
     color: 'rgba(190, 226, 255, 0.74)',
     fontSize: 12,
     marginTop: 4,
   },
+
   focusStatus: {
     minWidth: 74,
     height: 30,
@@ -1399,23 +1482,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 10,
   },
+
   focusStatusText: {
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '900',
   },
+
   focusBadgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
     marginTop: 12,
   },
+
   focusInfoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginTop: 14,
     gap: 10,
   },
+
   focusInfoCell: {
     width: '47%',
     minHeight: 54,
@@ -1426,12 +1513,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
+
   focusInfoLabel: {
     color: 'rgba(176, 220, 255, 0.6)',
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },
+
   focusInfoValue: {
     color: '#EAF9FF',
     fontSize: 13,
@@ -1439,11 +1528,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
     lineHeight: 17,
   },
+
   focusActionsRow: {
     flexDirection: 'row',
     gap: 10,
     marginTop: 12,
   },
+
   actionPrimary: {
     flex: 1,
     height: 44,
@@ -1454,9 +1545,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(121, 232, 255, 0.78)',
     backgroundColor: 'rgba(27, 96, 174, 0.96)',
   },
+
   actionBuy: {
     backgroundColor: 'rgba(13, 118, 173, 0.96)',
   },
+
   actionSecondary: {
     flex: 1,
     height: 44,
@@ -1467,19 +1560,23 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(101, 208, 255, 0.26)',
     backgroundColor: 'rgba(6, 22, 61, 0.92)',
   },
+
   actionSell: {
     backgroundColor: 'rgba(8, 29, 78, 0.92)',
   },
+
   actionPrimaryText: {
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '900',
   },
+
   actionSecondaryText: {
     color: '#DDF6FF',
     fontSize: 13,
     fontWeight: '800',
   },
+
   noteBox: {
     marginTop: 12,
     paddingHorizontal: 12,
@@ -1489,11 +1586,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(98, 205, 255, 0.16)',
   },
+
   noteText: {
     color: 'rgba(200, 232, 255, 0.84)',
     fontSize: 12,
     lineHeight: 17,
   },
+
   emptyState: {
     minHeight: 160,
     borderRadius: 18,
@@ -1505,11 +1604,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginTop: 8,
   },
+
   emptyTitle: {
     color: '#F7FDFF',
     fontSize: 18,
     fontWeight: '800',
   },
+
   emptyBody: {
     color: 'rgba(189, 227, 255, 0.74)',
     fontSize: 13,
@@ -1517,6 +1618,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
+
   pressed: {
     opacity: 0.92,
   },
